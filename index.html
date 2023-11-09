@@ -12,22 +12,22 @@
         margin: 0;
         padding: 0;
       }
-      
+
       .country {
         fill: #ffffff;
         stroke: #030303;
         stroke-width: 1;
       }
-      
+
       .town_name {
         fill: rgb(0, 0, 0);
         stroke: rgb(0, 0, 0);
         stroke-width: 1px;
         font-size: 12px;
-        
       }
+
       .slider-label {
-        color: rgb(0, 0, 0);  
+        color: rgb(0, 0, 0);
         stroke: #030303;
         stroke-width: 1px;
         font-size: 18px;
@@ -44,7 +44,7 @@
       }
 
       .reload-button {
-        background-color: #04AA6D;
+        background-color: #04aa6d;
         padding: 15px 30px;
         border: none;
         color: white;
@@ -54,13 +54,24 @@
         top: 70px;
         left: 20px;
       }
+
+      /* Tooltip styles */
+      .tooltip {
+        position: absolute;
+        background-color: #333;
+        color: white;
+        padding: 5px;
+        border-radius: 5px;
+        opacity: 0;
+        pointer-events: none;
+      }
     </style>
   </head>
 
   <body>
     <div id="GBmap"></div>
-    <label for="townSlider" class="slider-label"  
-    >Please use the slider to select the number of Towns: 
+    <label for="townSlider" class="slider-label"
+      >Please use the slider to select the number of Towns:
       <span id="NumberOfTowns">50</span></label
     >
     <input
@@ -69,9 +80,13 @@
       class="slider"
       min="0"
       max="500"
-      value="05" 
+      value="05"
     />
     <button id="reload" class="reload-button">Reload</button>
+
+    <!-- Tooltip element to view selected towns -->
+    <div class="tooltip" id="townTooltip"></div>
+
     <script>
       var svg = d3
         .select("#GBmap")
@@ -90,6 +105,39 @@
 
       var populationScale = d3.scaleSqrt().range([0, 20]);
 
+      // Function to display tooltips
+      function showTooltip(d) {
+        var tooltip = d3.select("#townTooltip");
+        tooltip.transition().duration(200).style("opacity", 0.9);
+        tooltip
+          .html(
+            "Town: " +
+              d.Town +
+              "<br>" +
+              "Population: " +
+              d.Population.toLocaleString() +
+              "<br>" +
+              "County: " +
+              d.County +
+              "<br>" +
+              "Latitude: " +
+              d.lat +
+              "<br>" +
+              "Longitude: " +
+              d.lng
+          )
+          .style("left", d3.event.pageX + "px")
+          .style("top", d3.event.pageY - 28 + "px");
+      }
+
+      // Function to hide tooltips
+      function hideTooltip() {
+        d3.select("#townTooltip")
+          .transition()
+          .duration(500)
+          .style("opacity", 0);
+      }
+
       d3.json("https://yamu.pro/gb.json", function (error, data) {
         svg
           .selectAll(".country")
@@ -101,21 +149,17 @@
           .append("title")
           .text("Great Britain");
       });
+
       function updateSliderDisplay(value) {
         d3.select("#NumberOfTowns").text(value);
       }
+
       function updateTowns(newTowns) {
         // Updates the slider value display
-        updateSliderDisplay(newTowns); // Updates text next to the slider
-      }
-      function updateTowns(newTowns) {
-        // Updates the slider value display
-        d3.select("#NumberOfTowns").text(newTowns); // Updates text next to slider
+        d3.select("#NumberOfTowns").text(newTowns);
         d3.json(
           "http://34.38.72.236/Circles/Towns/" + newTowns,
           function (error, data) {
-            //importing new towns from the feed link
-
             if (error) throw error;
             populationScale.domain([
               0,
@@ -148,7 +192,7 @@
                 if (population < 30000) {
                   return "#90EE90";
                 } else if (population < 70000) {
-                  return "green";                
+                  return "green";
                 } else if (population < 100000) {
                   return "yellow";
                 } else if (population < 120000) {
@@ -158,6 +202,12 @@
                 } else if (population < 200000) {
                   return "maroon";
                 }
+              })
+              .on("mouseover", function (d) {
+                showTooltip(d);
+              })
+              .on("mouseout", function () {
+                hideTooltip();
               });
 
             // Updates new towns on map
@@ -168,7 +218,7 @@
               .enter()
               .append("text") // Creates new towns
               .attr("class", "town_name")
-              .merge(labels) 
+              .merge(labels)
               .attr("x", function (d) {
                 return projection([d.lng, d.lat])[0] + 7;
               })
@@ -181,15 +231,15 @@
           }
         );
       }
+
       function updateSliderDisplay(value) {
-        d3.select("#NumberOfTowns").text(value); // Updates text next to slider
+        d3.select("#NumberOfTowns").text(value);
       }
+
       d3.select("#townSlider").on("input", function () {
-        // Event listener for the slider input
         updateTowns(this.value);
       });
       d3.select("#reload").on("click", function () {
-        // Event listener for the reload button
         var newTowns = d3.select("#townSlider").node().value;
         updateTowns(newTowns);
       });
